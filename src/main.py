@@ -91,8 +91,8 @@ class FractalThread(threading.Thread):
             while len(self._taskQueue) > 0:
                 task = self._taskQueue.pop()
                 for line in task.generator:
-                    if self._stopFlag: return
                     task.image.append(line)
+                    if self._stopFlag: return
             sleep(0.1)
                     
     def stop(self):
