@@ -18,13 +18,15 @@ class Rect:
         self.h = abs(self.b - self.t)
 
 class Task:
-    _image = []
+    _image=[]
+        
     def __init__(self, imageRect, fractalRect, compute):
         self.ir = imageRect
         self.fr = fractalRect
         self.cp = compute
     
     def __call__(self):
+        self._image = []
         xStep = self.fr.w / self.ir.w
         yStep = self.fr.h / self.ir.h
         for (x,y) in product(xrange(self.ir.w), xrange(self.ir.h)):
@@ -55,23 +57,25 @@ def mandelbrotCompute(x0, y0, maxDepth):
 
 width = 640
 height = 480
-fractalRect1 = Rect(-1.5, 0.5, -1.0, 0.0)
-fractalRect2 = Rect(-1.5, -0.5, 0.0, 1.0)
-fractalRect3 = Rect(-0.5, 0.5, 0.0, 1.0)
-imageRect1 = Rect(0, width, 0, height/2)
-imageRect2 = Rect(0, width/2, height/2, height)
-imageRect3 = Rect(width/2, width, height/2, height)
+fractalRects = []
+imageRects = []
+
+#    task 1
+fractalRects.append(Rect(-1.5, 0.5, -1.0, 0.0))
+imageRects.append(Rect(0, width, 0, height/2))
+#    task 2
+fractalRects.append(Rect(-0.5, 0.5, 0.0, 1.0))
+imageRects.append(Rect(width/2, width, height/2, height))
+#    task 3
+fractalRects.append(Rect(-1.5, -0.5, 0.0, 1.0))
+imageRects.append(Rect(0, width/2, height/2, height))
 
 compute = partial(mandelbrotCompute, maxDepth=100)
 
-task1 = Task(imageRect1, fractalRect1, compute)
-task2 = Task(imageRect2, fractalRect2, compute)
-task3 = Task(imageRect3, fractalRect3, compute)
+tasks = [Task(ir, fr, compute) for (ir, fr) in zip(imageRects, fractalRects)]
 
 threadPool = ThreadPool(2)
-threadPool.add_task(task1)
-threadPool.add_task(task3)
-threadPool.add_task(task2)
+map(threadPool.add_task, tasks)
     
 pygame.init() 
 screen = pygame.display.set_mode((width, height))
@@ -81,12 +85,9 @@ running = True
 while running:
     
     screen.lock() 
-    for ((x,y), depth) in task1:
-        screen.set_at((x, y), depth*1000)
-    for ((x,y), depth) in task2:
-        screen.set_at((x, y), depth*1000)
-    for ((x,y), depth) in task3:
-        screen.set_at((x, y), depth*1000)
+    for task in tasks:
+        for ((x,y), depth) in task:
+            screen.set_at((x, y), depth*1000) 
     screen.unlock()
 
     for event in pygame.event.get():
