@@ -22,7 +22,7 @@ class Rect:
         self.h = abs(self.b - self.t)
 
 class Task:
-    _image=[]
+    _columns=[]
         
     def __init__(self, imageRect, fractalRect, compute):
         self.ir = imageRect
@@ -30,16 +30,18 @@ class Task:
         self.cp = compute
     
     def __call__(self):
-        self._image = []
+        self._columns = []
         xStep = self.fr.w / self.ir.w
         yStep = self.fr.h / self.ir.h
-        for (x,y) in product(xrange(self.ir.w), xrange(self.ir.h)):
-            self._image.append( ((self.ir.l+x ,self.ir.t+y),                        # coordinates of pixel
-                                 self.cp(self.fr.l + x*xStep, self.fr.t + y*yStep)  # value for pixel
-                                ))
+#        for (x,y) in product(xrange(self.ir.w), xrange(self.ir.h)):
+#            self._columns.append( ((self.ir.l+x ,self.ir.t+y),                        # coordinates of pixel
+#                                 self.cp(self.fr.l + x*xStep, self.fr.t + y*yStep)  # value for pixel
+#                                ))
+        for x in xrange(self.ir.w):
+            self._columns.append( [self.cp(self.fr.l + x*xStep, self.fr.t + y*yStep) for y in xrange(self.ir.h)] )
     
     def __iter__(self):
-        return iter(self._image)
+        return iter(self._columns)
         
 #    mandelbrot computer
 def mandelbrotCompute(x0, y0, maxDepth):
@@ -51,7 +53,7 @@ def mandelbrotCompute(x0, y0, maxDepth):
         y = 2*x*y + y0
         x = xtemp
         iteration = iteration + 1
-    return iteration
+    return iteration*1000
    
         
 
@@ -90,15 +92,21 @@ while running:
     
     for task in tasks:
         pixels = pygame.surfarray.pixels2d(screen)
-        for ((x,y), depth) in task:
-            pixels[x,y] = depth*1000
+#        print pixels[5, 10]
+#        print len(pixels[5])
+
+        if(len(task._columns)):
+            pixels[task.ir.l:task.ir.l+len(task._columns), task.ir.t:task.ir.b] = task._columns
+        
+#        for ((x,y), depth) in task:
+#            pixels[x,y] = depth*1000
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
     pygame.display.flip()
-    print clock.tick(30)
+    print clock.tick(2)
 
 
 
