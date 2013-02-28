@@ -8,7 +8,6 @@ requirements:
     - NumPy  http://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy
 '''
 import pygame
-from itertools import product
 from functools import partial
 from pool import ThreadPool
 
@@ -22,7 +21,7 @@ class Rect:
         self.h = abs(self.b - self.t)
 
 class Task:
-    _columns=[]
+    columns=[]
         
     def __init__(self, imageRect, fractalRect, compute):
         self.ir = imageRect
@@ -30,30 +29,23 @@ class Task:
         self.cp = compute
     
     def __call__(self):
-        self._columns = []
+        self.columns = []
         xStep = self.fr.w / self.ir.w
         yStep = self.fr.h / self.ir.h
-#        for (x,y) in product(xrange(self.ir.w), xrange(self.ir.h)):
-#            self._columns.append( ((self.ir.l+x ,self.ir.t+y),                        # coordinates of pixel
-#                                 self.cp(self.fr.l + x*xStep, self.fr.t + y*yStep)  # value for pixel
-#                                ))
+
         for x in xrange(self.ir.w):
-            self._columns.append( [self.cp(self.fr.l + x*xStep, self.fr.t + y*yStep) for y in xrange(self.ir.h)] )
-    
-    def __iter__(self):
-        return iter(self._columns)
+            column = [self.cp(self.fr.l + x*xStep, self.fr.t + y*yStep) for y in xrange(self.ir.h)]
+            self.columns.append(column)
         
 #    mandelbrot computer
-def mandelbrotCompute(x0, y0, maxDepth):
-    x = y = 0
-    iteration = 0
-    
-    while x*x + y*y < 2*2  and  iteration < maxDepth:
-        xtemp = x*x - y*y + x0
-        y = 2*x*y + y0
-        x = xtemp
-        iteration = iteration + 1
-    return iteration*1000
+def mandelbrotCompute(x, y, maxDepth):
+    z = complex(x, y)
+    c = z
+    for i in range(maxDepth):
+        z = z*z + c
+        if abs(z) > 2:
+            return i*1000
+    return 0
    
         
 
@@ -61,8 +53,8 @@ def mandelbrotCompute(x0, y0, maxDepth):
 #    actual script
 #
 
-width = 640
-height = 480
+width = 555
+height = 555
 fractalRects = []
 imageRects = []
 
@@ -88,25 +80,21 @@ screen = pygame.display.set_mode((width, height))
 clock = pygame.time.Clock()
 running = True
 
+pixels = pygame.surfarray.pixels2d(screen)
 while running:
     
+    
     for task in tasks:
-        pixels = pygame.surfarray.pixels2d(screen)
-#        print pixels[5, 10]
-#        print len(pixels[5])
-
-        if(len(task._columns)):
-            pixels[task.ir.l:task.ir.l+len(task._columns), task.ir.t:task.ir.b] = task._columns
-        
-#        for ((x,y), depth) in task:
-#            pixels[x,y] = depth*1000
+        if(len(task.columns)):
+            pixels[task.ir.l:task.ir.l+len(task.columns), task.ir.t:task.ir.b] = task.columns
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
     pygame.display.flip()
-    print clock.tick(2)
+    clock.tick(5)
+    print pygame.time.get_ticks()
 
 
 
