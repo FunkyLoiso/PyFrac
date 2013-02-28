@@ -2,6 +2,10 @@
 Created on 25 02 2013
 
 @author: nein
+
+requirements:
+    - PyGame http://www.lfd.uci.edu/~gohlke/pythonlibs/#pygame
+    - NumPy  http://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy
 '''
 import pygame
 from itertools import product
@@ -84,18 +88,17 @@ running = True
 
 while running:
     
-    screen.lock() 
     for task in tasks:
+        pixels = pygame.surfarray.pixels2d(screen)
         for ((x,y), depth) in task:
-            screen.set_at((x, y), depth*1000) 
-    screen.unlock()
+            pixels[x,y] = depth*1000
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
     pygame.display.flip()
-    clock.tick(30)
+    print clock.tick(30)
 
 
 
