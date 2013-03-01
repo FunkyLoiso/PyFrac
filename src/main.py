@@ -9,7 +9,9 @@ requirements:
 '''
 import pygame
 from functools import partial
-from pool import ThreadPool
+#from pool import ThreadPool
+from multiprocessing import Pool, Manager
+from Queue import Empty
 
 class Rect:
     def __init__(self, left, right, top, bottom):
@@ -21,21 +23,17 @@ class Rect:
         self.h = abs(self.b - self.t)
 
 class Task:
-    columns=[]
-        
     def __init__(self, imageRect, fractalRect, compute):
         self.ir = imageRect
         self.fr = fractalRect
         self.cp = compute
     
-    def __call__(self):
-        self.columns = []
+    def __call__(self, queue):
         xStep = self.fr.w / self.ir.w
         yStep = self.fr.h / self.ir.h
 
         for x in xrange(self.ir.w):
-            column = [self.cp(self.fr.l + x*xStep, self.fr.t + y*yStep) for y in xrange(self.ir.h)]
-            self.columns.append(column)
+            queue.put( (x, [self.cp(self.fr.l + x*xStep, self.fr.t + y*yStep) for y in xrange(self.ir.h)]) )
         
 #    mandelbrot computer
 def mandelbrotCompute(x, y, maxDepth):
@@ -44,7 +42,7 @@ def mandelbrotCompute(x, y, maxDepth):
     for i in range(maxDepth):
         z = z*z + c
         if abs(z) > 2:
-            return i*1000
+            return i * 1000
     return 0
 
 #
@@ -78,30 +76,39 @@ fractalRect = Rect(-1.5, 0.5, -1.0, 1.0)
 compute = partial(mandelbrotCompute, maxDepth=100)
 
 task = Task(imageRect, fractalRect, compute)
-tasks = divideTask(task, 5)
+tasks = divideTask(task, 10)
   
-threadPool = ThreadPool(2)
-map(threadPool.add_task, tasks)
-  
-pygame.init() 
-screen = pygame.display.set_mode((width, height))
-screen.fill((150, 150, 150))
-clock = pygame.time.Clock()
-pixels = pygame.surfarray.pixels2d(screen)
-
-running = True
-while running:
-    for task in tasks:
-        if(len(task.columns)):
-            pixels[task.ir.l:task.ir.l+len(task.columns), task.ir.t:task.ir.b] = task.columns
-
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-    pygame.display.flip()
-    clock.tick(5)
-    pygame.display.set_caption(str(pygame.time.get_ticks()))
-
+if __name__ == "__main__":
+    pygame.init() 
+    screen = pygame.display.set_mode((width, height))
+    screen.fill((150, 150, 150))
+    clock = pygame.time.Clock()
+    pixels = pygame.surfarray.pixels2d(screen)
+    
+    manager = Manager()
+    pool = Pool()
+    for i in range(len(tasks)):
+        task = tasks[i]
+        task.queue = manager.Queue()
+        pool.apply_async(task, (task.queue, ))
+        
+    running = True
+    while running:
+        for task in tasks:
+            while True:
+                try:
+                    (x, column) = task.queue.get_nowait()
+                except Empty:
+                    break 
+                pixels[x, task.ir.t:task.ir.b] = column
+    
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+    
+        pygame.display.flip()
+        clock.tick(5)
+        pygame.display.set_caption(str(pygame.time.get_ticks()))
+    
 
 
