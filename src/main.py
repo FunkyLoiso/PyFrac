@@ -46,44 +46,51 @@ def mandelbrotCompute(x, y, maxDepth):
         if abs(z) > 2:
             return i*1000
     return 0
-   
-        
+
+#
+def divideTask(task, parts):
+    iHeight = task.ir.h / parts
+    fHeight = task.fr.h / parts
+    tasks = []
+    
+    iPartTop = task.ir.t
+    fPartTop = task.fr.t
+    for _ in range(parts-1):
+        imageRect = Rect(task.ir.l, task.ir.r, iPartTop, iPartTop+iHeight)
+        iPartTop += iHeight
+        fractalRect = Rect(task.fr.l, task.fr.r, fPartTop, fPartTop+fHeight)
+        fPartTop += fHeight
+        tasks.append(Task(imageRect, fractalRect, task.cp))
+    # last part
+    imageRect = Rect(task.ir.l, task.ir.r, iPartTop, task.ir.b)
+    fractalRect = Rect(task.fr.l, task.fr.r, fPartTop, task.fr.b)
+    tasks.append(Task(imageRect, fractalRect, task.cp))
+    
+    return tasks   
 
 #
 #    actual script
 #
-
 width = 555
 height = 555
-fractalRects = []
-imageRects = []
-
-#    task 1
-fractalRects.append(Rect(-1.5, 0.5, -1.0, 0.0))
-imageRects.append(Rect(0, width, 0, height/2))
-#    task 2
-fractalRects.append(Rect(-0.5, 0.5, 0.0, 1.0))
-imageRects.append(Rect(width/2, width, height/2, height))
-#    task 3
-fractalRects.append(Rect(-1.5, -0.5, 0.0, 1.0))
-imageRects.append(Rect(0, width/2, height/2, height))
-
+imageRect = Rect(0, width, 0, height)
+fractalRect = Rect(-1.5, 0.5, -1.0, 1.0)
 compute = partial(mandelbrotCompute, maxDepth=100)
 
-tasks = [Task(ir, fr, compute) for (ir, fr) in zip(imageRects, fractalRects)]
-
+task = Task(imageRect, fractalRect, compute)
+tasks = divideTask(task, 5)
+  
 threadPool = ThreadPool(2)
 map(threadPool.add_task, tasks)
-    
+  
 pygame.init() 
 screen = pygame.display.set_mode((width, height))
+screen.fill((150, 150, 150))
 clock = pygame.time.Clock()
-running = True
-
 pixels = pygame.surfarray.pixels2d(screen)
+
+running = True
 while running:
-    
-    
     for task in tasks:
         if(len(task.columns)):
             pixels[task.ir.l:task.ir.l+len(task.columns), task.ir.t:task.ir.b] = task.columns
@@ -94,7 +101,7 @@ while running:
 
     pygame.display.flip()
     clock.tick(5)
-    print pygame.time.get_ticks()
+    pygame.display.set_caption(str(pygame.time.get_ticks()))
 
 
 

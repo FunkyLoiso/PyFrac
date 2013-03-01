@@ -22,8 +22,8 @@ class Worker(Thread):
 
 class ThreadPool:
     """Pool of threads consuming tasks from a queue"""
-    def __init__(self, num_threads):
-        self.tasks = Queue(num_threads)
+    def __init__(self, num_threads, max_queue=0):
+        self.tasks = Queue(max_queue)
         for _ in range(num_threads): Worker(self.tasks)
 
     def add_task(self, func, *args, **kargs):
